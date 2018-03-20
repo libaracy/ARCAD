@@ -11,6 +11,7 @@ ARCore::ARCore() {}
 /////////////////////////////////////////
 void ARCore::init(double zyjBoardLength) {
     setZYJBoard(zyjBoardLength);
+    initVTK();
 }
 
 /////////////////////////////////////////
@@ -44,7 +45,7 @@ bool ARCore::calibrationNow(const vector<cv::Mat> & frames) {
             cvtColor(tmp, view_gray, CV_RGB2GRAY);
             /* sub-pixel accurancy */
             find4QuadCornerSubpix(view_gray, image_points_buf, cv::Size(5, 5));
-            image_points_seq.push_back(image_points_buf); 
+            image_points_seq.push_back(image_points_buf);
             cv::drawChessboardCorners(view_gray, board_size, image_points_buf, false);
             cv::imshow("Camera Calibration", view_gray);
             cv::waitKey(200);
@@ -175,7 +176,7 @@ bool ARCore::calcCamPoseFromFrame(const cv::Mat & frame, CameraPose & camPose) {
 // params - frame: the frame which contains the zyjBoard
 //          sortedCorners: the corners' pose (rectangle, triangle, none, circle)
 /////////////////////////////////////////
-bool ARCore::locateZYJBoard(const cv::Mat & frame, std::vector<cv::Point2d> & sortedCorners, bool progress) {
+bool ARCore::locateZYJBoard(const cv::Mat & frame, cv::vector<cv::Point2d> & sortedCorners, bool progress) {
     cv::Mat src = frame.clone();
 
     //1. find the zyjboard
@@ -183,30 +184,28 @@ bool ARCore::locateZYJBoard(const cv::Mat & frame, std::vector<cv::Point2d> & so
     cvtColor(src, src_gray1, CV_BGR2GRAY);
     threshold(src_gray1, src_gray1, 95, 255, THRESH_BINARY);
     bitwise_not(src_gray1, src_gray2);
-    std::vector<std::vector<cv::Point>> contours;
-    std::vector<cv::Vec4i> hierarchy;
-    std::vector<cv::Mat> contoursMat(5000);
+    cv::vector<cv::vector<cv::Point>> contours;
+    cv::vector<cv::Vec4i> hierarchy;
+    cv::vector<cv::Mat> contoursMat(5000);
     cv::Mat hierarchyMat;
-    std::vector<cv::Point2d> MarkerContour = {};
-    std::vector<int> innerIndexRecord = {};
+    cv::vector<cv::Point2d> MarkerContour = {};
+    cv::vector<int> innerIndexRecord = {};
     findContours(src_gray2, contoursMat, hierarchyMat, CV_RETR_CCOMP, CV_CHAIN_APPROX_NONE);
     contoursMat2Vec(contoursMat, contours, hierarchyMat, hierarchy);
+    cv::vector<cv::Point> approxCurve = {};
     for (int i = 0; i < contours.size(); i++) {
-        Rect rect = boundingRect(contours[i]);
-        vector<Point> approxCurve;
+        cv::Rect rect = boundingRect(contours[i]);
         approxPolyDP(contours[i], approxCurve, arcLength(Mat(contours[i]), true) * 0.03, true); //estimate the shape of contour
         double k = (rect.height + 0.0) / rect.width;
         if (progress) {
             drawContours(src, contours, i, Scalar(0, 255, 255));
-            //cv::imshow("tmp", src);
-            //cv::waitKey(0);
         }
-        
+
         if (0.3 < k && k < 1.6 && rect.area() > 5000 && judgeIfRect(approxCurve, contours[i])) {
-            std::vector<int> tmpinnerIndexRecord = {};
+            cv::vector<int> tmpinnerIndexRecord = {};
             if (hierarchy[i][2] != -1 && judgeIfOutZYJBoard(contours, hierarchy, i, tmpinnerIndexRecord)) {
                 // this is the zyjboard
-                innerIndexRecord = tmpinnerIndexRecord;
+                innerIndexRecord.swap(tmpinnerIndexRecord);
                 MarkerContour.push_back(approxCurve[0]);
                 MarkerContour.push_back(approxCurve[1]);
                 MarkerContour.push_back(approxCurve[2]);
@@ -214,17 +213,21 @@ bool ARCore::locateZYJBoard(const cv::Mat & frame, std::vector<cv::Point2d> & so
                 drawContours(src, contours, i, Scalar(0, 0, 255));
             }
         }
+        approxCurve.clear();
+        //std::vector<cv::Point>(approxCurve).swap(approxCurve);
     }
     if (progress && innerIndexRecord.size() == 0) {
         cv::imwrite("notRecog.png", src);
     }
     //2. get the inner contours
-    vector<Point> contour_rect = {};    //inner rectangle
-    vector<Point> contour_tria = {};    //inner triangle
-    vector<Point> contour_cir = {};     //inner circle
+    cv::vector<cv::Point> contour_rect = {};    //inner rectangle
+    cv::vector<cv::Point> contour_tria = {};    //inner triangle
+    cv::vector<cv::Point> contour_cir = {};     //inner circle
+
+    cv::vector<cv::Point> in_approxCurve = {};
     for (int index : innerIndexRecord) {
         Rect in_rect = boundingRect(contours[index]);
-        vector<Point> in_approxCurve;
+
         approxPolyDP(contours[index], in_approxCurve, arcLength(Mat(contours[index]), true) * 0.045, true); //estimate the shape of contour
         if (in_approxCurve.size() == 4) {
             contour_rect = contours[index];
@@ -242,8 +245,10 @@ bool ARCore::locateZYJBoard(const cv::Mat & frame, std::vector<cv::Point2d> & so
             cv::imshow("bound", src);
             cv::waitKey(0);
         }
+
+        in_approxCurve.clear();
     }
-    
+
     if (contour_rect.size() == 0 || contour_tria.size() == 0 || contour_cir.size() == 0)
         return false;
 
@@ -258,7 +263,7 @@ bool ARCore::locateZYJBoard(const cv::Mat & frame, std::vector<cv::Point2d> & so
             corner_Last = cContour;
         }
     }
-    sortedCorners.push_back(corner_Rect); 
+    sortedCorners.push_back(corner_Rect);
     sortedCorners.push_back(corner_Tria);
     sortedCorners.push_back(corner_Last);
     sortedCorners.push_back(corner_Cir);
@@ -283,6 +288,66 @@ void ARCore::setZYJBoard(double length) {
     zyjBoardCorner3dCoords.push_back({ 0.0, zyjBoardLength, 0.0 });                 //(0,1,0)
 }
 
+/////////////////////////////////////////
+// description: use VTK as the render engine, init the VTK here
+// notice: this function could be called by init()
+// param: progress - if show the vtk window
+/////////////////////////////////////////
+void ARCore::initVTK(bool progress) {
+    render->SetBackground(0, 0, 0);
+    aCamera->SetViewUp(0, 0, -1);
+    aCamera->SetPosition(0, 5, 0);
+    aCamera->SetFocalPoint(0, 0, 0);
+    aCamera->ComputeViewPlaneNormal();
+    render->SetActiveCamera(aCamera);
+    renWin->AddRenderer(render);
+    if (!progress) {
+        renWin->SetOffScreenRendering(1);
+    }
+}
+
+/////////////////////////////////////////
+// description: set VTK Camera information
+// params - camPose: the camera pose
+// return - vtkImg: VTK render result
+/////////////////////////////////////////
+void ARCore::setVTKCamera(const CameraPose & camPose) {
+    // set camera position
+    aCamera->SetPosition(camPose.tvec.at<double>(0, 0), camPose.tvec.at<double>(1, 0), camPose.tvec.at<double>(2, 0));
+    // set camera pose
+    //cv::Mat Py = camPose.rotationMatrix
+    //aCamera->SetViewUp();
+}
+
+/////////////////////////////////////////
+// description: use VTK as the render engine, get the render result
+// params - camPose: the camera pose
+// return - vtkImg: VTK render result
+/////////////////////////////////////////
+cv::Mat ARCore::getFrameFromVTK(bool progress) {
+    renWin->Render();
+    vtkSmartPointer<vtkWindowToImageFilter> windowToImageFilter =
+        vtkSmartPointer<vtkWindowToImageFilter>::New();
+    windowToImageFilter->SetInput(renWin);
+    windowToImageFilter->Update();
+    vtkSmartPointer<vtkImageWriter> imgWriter = vtkSmartPointer<vtkImageWriter>::New();
+    imgWriter->SetInputConnection(windowToImageFilter->GetOutputPort());
+    vtkImageData *imgRendered = imgWriter->GetImageDataInput(0);
+    cv::Mat vtkImg = vtkImage2Mat(imgRendered);
+    if (progress) {
+        cv::imshow("vtk frame", vtkImg);
+        cv::waitKey(0);
+    }
+
+    return vtkImg;
+}
+
+/////////////////////////////////////////
+// description: draw the cube based on the recogonized ZYJBoard
+// params - frame: the original frame with zyjboard
+//          boardLength: the length(mm) of the zyjboard
+//          camPose: the camera pose
+/////////////////////////////////////////
 void ARCore::drawZYJBoardCube(cv::Mat & frame, double boardLength, const CameraPose & camPose) {
     vector<Vec3d> _cube3dPoints = {};
 
@@ -327,7 +392,7 @@ void ARCore::drawPoint(cv::Mat & frame, cv::Point3d original, const CameraPose &
 
 void ARCore::drawPolyLine(cv::Mat & frame, vector<Vec3d> polyPoints, bool closed, const CameraPose & camPose, cv::Scalar polyColor, int thickness) {
 
-    assert(polyPoints.size() > 0); 
+    assert(polyPoints.size() > 0);
 
     std::vector<Point2d> projectedPoints = {};
     projectPoints(polyPoints, camPose.rvec, camPose.tvec, cameraMatrix, distCoeffs, projectedPoints);
@@ -341,21 +406,26 @@ void ARCore::drawPolyLine(cv::Mat & frame, vector<Vec3d> polyPoints, bool closed
     int npt[1] = { projectedPoints.size() };
 
     //draw the poly line 
-    cv::polylines(frame, pt, npt,1, closed, polyColor, thickness);
+    cv::polylines(frame, pt, npt, 1, closed, polyColor, thickness);
 }
 
-void ARCore::drawCurveLine(cv::Mat & frame, vector<Vec3d> polyPoints, bool closed, const CameraPose & camPose, cv::Scalar polyColor, int thickness) {
-    assert(polyPoints.size() > 0);
+void ARCore::drawPlane(cv::Mat & frame, vector<Vec3d> planeCorners, const CameraPose & camPose, cv::Scalar planeColor, cv::Scalar borderColor, int thickness) {
+    assert(planeCorners.size() > 2);
 
     std::vector<Point2d> projectedPoints = {};
-    projectPoints(polyPoints, camPose.rvec, camPose.tvec, cameraMatrix, distCoeffs, projectedPoints);
+    projectPoints(planeCorners, camPose.rvec, camPose.tvec, cameraMatrix, distCoeffs, projectedPoints);
 
-    cv::Mat A;
-    polynomial_curve_fit(projectedPoints, A, 3);
-    std::vector<cv::Point> points_fitted;
+    //collect points
+    Point points[1][20000];
+    for (int i = 0; i < projectedPoints.size(); i++) {
+        points[0][i] = projectedPoints[i];
+    }
+    const Point* pt[1] = { points[0] };
+    int npt[1] = { projectedPoints.size() };
 
+    cv::fillPoly(frame, pt, npt, 1, planeColor, 8);
 
-    cv::polylines(frame, points_fitted, false, polyColor, 1);
+    drawPolyLine(frame, planeCorners, true, camPose, borderColor, thickness);
 }
 
 void ARCore::drawCubeLine(cv::Mat & frame, cv::Point3d original, double width, double length, double height, const CameraPose & camPose, cv::Scalar lineColor, int thickness) {
@@ -364,7 +434,7 @@ void ARCore::drawCubeLine(cv::Mat & frame, cv::Point3d original, double width, d
     assert(width > 0 && length >0 && height > 0);
 
     // set coordinate system in the middle of the marker, with Z pointing out
-    _cube3dPoints.push_back({original.x, original.y, original.z});                         // (0,0,0)
+    _cube3dPoints.push_back({ original.x, original.y, original.z });                         // (0,0,0)
     _cube3dPoints.push_back({ original.x + width, original.y, original.z });                 // (1,0,0)
     _cube3dPoints.push_back({ original.x + width, original.y + length, original.z });         // (1,1,0)
     _cube3dPoints.push_back({ original.x, original.y + length, original.z });                 // (0,1,0)
@@ -432,7 +502,7 @@ void ARCore::drawCube(cv::Mat & frame, cv::Point3d original, double width, doubl
         int npt[1] = { 4 };
 
         cv::fillPoly(frame, pt, npt, 1, cubeColor, 8);
-    } 
+    }
 
     //2. draw left plate
     {
@@ -501,7 +571,7 @@ void ARCore::drawCube(cv::Mat & frame, cv::Point3d original, double width, doubl
 
     //7. draw border
     for (int i = 0; i<4; i++) {
-        if (i <= 2) line(frame, projectedPoints[i], projectedPoints[i + 1], {255,255,255}, 1, 1);
+        if (i <= 2) line(frame, projectedPoints[i], projectedPoints[i + 1], { 255,255,255 }, 1, 1);
         if (i>2) line(frame, projectedPoints[i], projectedPoints[0], { 255,255,255 }, 1, 1);
     }
 
@@ -561,7 +631,7 @@ bool ARCore::judgeIfRect(vector<Point> corners, vector<Point2i> contour) {
 bool ARCore::judgeIfOutZYJBoard(const std::vector<std::vector<cv::Point>> & contours, const vector<Vec4i> & hierarchy, int index, std::vector<int> & innerIndexRecord) {
     Vec4i c_hier = hierarchy[index];
     int innerNum = 0;
-    for (int i = 0; i < hierarchy.size();i++) {
+    for (int i = 0; i < hierarchy.size(); i++) {
         auto tmp_hier = hierarchy[i];
         if (tmp_hier[3] == index) {
             if (contours[i].size() >= 15) {
@@ -585,7 +655,7 @@ Point ARCore::getTheNearestCorner(vector<Point2d> MarkerContour, Point2d point) 
     auto dist2 = sqrt((MarkerContour[1].x - point.x) * (MarkerContour[1].x - point.x) + (MarkerContour[1].y - point.y) * (MarkerContour[1].y - point.y));
     auto dist3 = sqrt((MarkerContour[2].x - point.x) * (MarkerContour[2].x - point.x) + (MarkerContour[2].y - point.y) * (MarkerContour[2].y - point.y));
     auto dist4 = sqrt((MarkerContour[3].x - point.x) * (MarkerContour[3].x - point.x) + (MarkerContour[3].y - point.y) * (MarkerContour[3].y - point.y));
-    
+
     TmpPosValue tpv_d1, tpv_d2, tpv_d3, tpv_d4;
     tpv_d1.index = 0;
     tpv_d1.value = dist1;
@@ -618,39 +688,6 @@ void ARCore::contoursMat2Vec(const std::vector<cv::Mat> & contoursMat, std::vect
     }
 }
 
-/////////////////////////////////////////
-// description: give the points and get the fitted curve
-/////////////////////////////////////////
-void ARCore::polynomial_curve_fit(std::vector<cv::Point2d>& key_point, cv::Mat& A, int n) {
-    int N = key_point.size();
-
-    cv::Mat X = cv::Mat::zeros(n + 1, n + 1, CV_64FC1);
-    for (int i = 0; i < n + 1; i++)
-    {
-        for (int j = 0; j < n + 1; j++)
-        {
-            for (int k = 0; k < N; k++)
-            {
-                X.at<double>(i, j) = X.at<double>(i, j) +
-                    std::pow(key_point[k].x, i + j);
-            }
-        }
-    }
-
-    cv::Mat Y = cv::Mat::zeros(n + 1, 1, CV_64FC1);
-    for (int i = 0; i < n + 1; i++)
-    {
-        for (int k = 0; k < N; k++)
-        {
-            Y.at<double>(i, 0) = Y.at<double>(i, 0) +
-                std::pow(key_point[k].x, i) * key_point[k].y;
-        }
-    }
-
-    A = cv::Mat::zeros(n + 1, 1, CV_64FC1);
-    cv::solve(X, Y, A, cv::DECOMP_LU);
-}
-
 void ARCore::saveCalibrationResult() {
     //1. cameraMatrix
     std::ofstream ofs1("cameraMatrix.bin", std::ios::out | std::ios::binary);
@@ -677,4 +714,20 @@ void ARCore::readCalibrationResult() {
 
     inf1.close();
     inf2.close();
+}
+
+cv::Mat ARCore::vtkImage2Mat(vtkImageData *image)
+{
+    int dim[3];
+    image->GetDimensions(dim);
+    int imgType = CV_8UC1;
+    if (image->GetNumberOfScalarComponents() == 1)
+        imgType = CV_8UC1;
+    if (image->GetNumberOfScalarComponents() == 3)
+        imgType = CV_8UC3;
+
+    cv::Mat matSrc(dim[1], dim[0], imgType, image->GetScalarPointer());
+    cv::cvtColor(matSrc, matSrc, CV_BGR2RGB);
+
+    return matSrc;
 }

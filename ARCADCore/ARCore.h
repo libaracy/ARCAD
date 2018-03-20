@@ -1,4 +1,5 @@
 #pragma once
+////OpenCV
 #include "opencv2/core/core_c.h"
 #include "opencv2/core/core.hpp"
 #include "opencv2/flann/miniflann.hpp"
@@ -24,7 +25,13 @@
 #include <vtkAutoInit.h>
 #include "vtkInteractorStyleTrackballActor.h"
 #include "vtkRenderWindow.h"  
-#include "vtkRenderWindowInteractor.h" 
+#include "vtkRenderWindowInteractor.h"
+#include "vtkImageData.h"
+#include "vtkImageActor.h"
+#include "vtkInformation.h"
+#include "vtkImageImport.h"
+#include "vtkWindowToImageFilter.h"
+#include "vtkImageWriter.h"
 ////BOOST
 #include <boost/serialization/split_free.hpp>  
 #include <boost/serialization/vector.hpp>
@@ -83,21 +90,32 @@ public:
     void drawZYJBoardCube(cv::Mat & frame, double boardLength, const CameraPose & camPose);
     void drawPoint(cv::Mat & frame, cv::Point3d original, const CameraPose & camPose, cv::Scalar pointColor = { 0,0,255 }, int thickness = 3);
     void drawPolyLine(cv::Mat & frame, vector<Vec3d> polyPoints, bool closed, const CameraPose & camPose, cv::Scalar polyColor = { 0,0,255 }, int thickness = 1);
-    void drawCurveLine(cv::Mat & frame, vector<Vec3d> polyPoints, bool closed, const CameraPose & camPose, cv::Scalar polyColor = { 0,0,255 }, int thickness = 1);
+    void drawPlane(cv::Mat & frame, vector<Vec3d> planeCorners, const CameraPose & camPose, cv::Scalar planeColor = { 0,0,255 }, cv::Scalar borderColor = { 255,255,255 }, int thickness = 1);
     void drawCubeLine(cv::Mat & frame, cv::Point3d original, double width, double length, double height, const CameraPose & camPose, cv::Scalar lineColor = { 0,0,255 }, int thickness = 1);
     void drawCube(cv::Mat & frame, cv::Point3d original, double width, double length, double height, const CameraPose & camPose, cv::Scalar cubeColor = { 0,0,255 });
     //void drawCylinderLine(cv::Mat & frame, cv::Point3d original, double radius, double height, const CameraPose & camPose, cv::Scalar lineColor = { 0,0,255 }, int thickness = 1);
+
+public:
+    void initVTK(bool progress = false);
+    void setVTKCamera(const CameraPose & camPose);
+    cv::Mat getFrameFromVTK(bool progress = false);
+    cv::Mat vtkImage2Mat(vtkImageData *image);
+
 private:
     bool judgeIfRect(vector<Point> corners, vector<Point2i> contour);
     bool judgeIfOutZYJBoard(const std::vector<std::vector<cv::Point>> & contours, const vector<Vec4i> & hierarchy, int index, std::vector<int> & innerIndexRecord);
     Point getTheNearestCorner(vector<Point2d> MarkerContour, Point2d point);
     void contoursMat2Vec(const std::vector<cv::Mat> & contoursMat, std::vector<std::vector<cv::Point>> & contours, const cv::Mat & hierarchyMat, std::vector<cv::Vec4i> & hierarchy);
-    // fit the line or curve based on the given points
-    void polynomial_curve_fit(std::vector<cv::Point2d>& key_point, cv::Mat& A, int n = 3);
 public:
+    //about calibration
     cv::Mat cameraMatrix = cv::Mat(3, 3, CV_32FC1, cv::Scalar::all(0)); /* the inner param matrix of camera */
     cv::Mat distCoeffs = cv::Mat(1, 5, CV_32FC1, cv::Scalar::all(0)); /* the five distortion param:k1,k2,p1,p2,k3 */
+                                                                      //about zyj board
     std::vector <cv::Vec3d> zyjBoardCorner3dCoords = {};
+    //about VTK
+    vtkRenderer *render = vtkRenderer::New();
+    vtkCamera *aCamera = vtkCamera::New();
+    vtkRenderWindow *renWin = vtkRenderWindow::New();
 };
 
 struct TmpPosValue {
