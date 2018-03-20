@@ -483,8 +483,6 @@ void ARCore::drawCubeLine(cv::Mat & frame, cv::Point3d original, double width, d
 void ARCore::drawCube(cv::Mat & frame, cv::Point3d original, double width, double length, double height, const CameraPose & camPose, cv::Scalar cubeColor) {
     vector<Vec3d> _cube3dPoints = {};
 
-    assert(width > 0 && length > 0 && height > 0);
-
     // set coordinate system in the middle of the marker, with Z pointing out
     _cube3dPoints.push_back({ original.x, original.y, original.z });                         // (0,0,0)
     _cube3dPoints.push_back({ original.x + width, original.y, original.z });                 // (1,0,0)
