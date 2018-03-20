@@ -59,7 +59,7 @@ void demo(string videoname) {
                 {45,54, -34}, {65, 55, -44}, {75, 67, -44}, {100,150,-55}, {90, 90, -50},{70, 85, -45}, {65, 55, -30},
                 {54, 54, -44}, {44, 43, -33}, {33, 22, -32}, {21, 21, -15} };
                 arCore.drawPolyLine(frame, polyPoints, false, camPose, { 0, 255, 255 }, 1);
-                arCore.drawCurveLine(frame, polyPoints, false, camPose, { 255, 0, 255 }, 2);
+                //arCore.drawCurveLine(frame, polyPoints, false, camPose, { 255, 0, 255 }, 2);
                 //test: draw any cube
                 arCore.drawCubeLine(frame, { 0.0, 116.0, -30.0 }, 50, 40, -30, camPose, {0,0,255}, 2);
                 arCore.drawCube(frame, { 116.0, 116.0, -40.0 }, 50, 50, -30, camPose, { 0,0,255 });
