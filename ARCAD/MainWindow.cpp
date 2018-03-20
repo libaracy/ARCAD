@@ -4,8 +4,7 @@
 
 MainWindow::MainWindow()
 {
-    setFixedSize(800, 600);
-
+    setFixedSize(1000, 1000);
     auto wnd = new ARWidget(this);
     wnd->setGeometry(geometry());
 }

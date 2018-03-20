@@ -3,16 +3,23 @@
 
 #include "stdafx.h"
 #include "ARCore.h"
+#define CORE_EXPORT
+#include "display.h"
 
 void demo(string videoname);
 void testLocateZYJBoard();
 
-int main()
+void display()
 {
     demo("calib2.mp4");
     //testLocateZYJBoard();
+}
 
-    return 0;
+static std::function<void(FramePtr)> g_cb = nullptr;
+
+void setDisplayCallback(std::function<void(FramePtr)> cb)
+{
+    g_cb = cb;
 }
 
 void demo(string videoname) {
@@ -31,8 +38,11 @@ void demo(string videoname) {
     arCore.readCalibrationResult();
 
     while (1) {
-        cv::Mat frame;
+        auto pFrame = std::make_shared<cv::Mat>();
+        auto& frame = *pFrame;
+
         capture >> frame;
+
         if (frame.empty())
         {
             printf("--(!) No captured frame -- Break!");
@@ -54,7 +64,10 @@ void demo(string videoname) {
                 arCore.drawCubeLine(frame, { 0.0, 116.0, -30.0 }, 50, 40, -30, camPose, {0,0,255}, 2);
                 arCore.drawCube(frame, { 116.0, 116.0, -40.0 }, 50, 50, -30, camPose, { 0,0,255 });
             }
-            cv::imshow("demo", frame);
+            if (g_cb) {
+                cv::cvtColor(frame, frame, CV_BGR2RGB);
+                g_cb(pFrame);
+            }
         }
         cv::waitKey(10);
     }
