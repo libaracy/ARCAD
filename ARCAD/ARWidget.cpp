@@ -6,10 +6,9 @@ ARWidget::ARWidget(QWidget* parent)
     :QWidget(parent)
 {
     setDisplayCallback([this](FramePtr frame) {
-        postFrame(frame);
+        m_frame = frame;
+        update();
     });
-
-    connect(this, &ARWidget::postFrame, this, &ARWidget::receiveFrame);
 
     std::thread(display).detach();
 }
@@ -19,13 +18,6 @@ ARWidget::~ARWidget()
 {
 }
 
-
-void ARWidget::receiveFrame(FramePtr frame)
-{
-    // is thread safe?
-    m_frame = frame;
-    update();
-}
 
 void ARWidget::paintEvent(QPaintEvent * event)
 {
