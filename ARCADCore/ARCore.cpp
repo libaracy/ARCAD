@@ -182,11 +182,15 @@ bool ARCore::locateZYJBoard(const cv::Mat & frame, cv::vector<cv::Point2d> & sor
     //1. find the zyjboard
     cv::Mat src_gray1, src_gray2;
     cvtColor(src, src_gray1, CV_BGR2GRAY);
-    threshold(src_gray1, src_gray1, 95, 255, THRESH_BINARY);
+    threshold(src_gray1, src_gray1, 55, 255, THRESH_BINARY);
     bitwise_not(src_gray1, src_gray2);
+    if (progress) {
+        cv::imshow("gray2", src_gray2);
+        cv::waitKey(0);
+    }
     cv::vector<cv::vector<cv::Point>> contours;
     cv::vector<cv::Vec4i> hierarchy;
-    cv::vector<cv::Mat> contoursMat(5000);
+    cv::vector<cv::Mat> contoursMat(6000);
     cv::Mat hierarchyMat;
     cv::vector<cv::Point2d> MarkerContour = {};
     cv::vector<int> innerIndexRecord = {};
@@ -199,6 +203,8 @@ bool ARCore::locateZYJBoard(const cv::Mat & frame, cv::vector<cv::Point2d> & sor
         double k = (rect.height + 0.0) / rect.width;
         if (progress) {
             drawContours(src, contours, i, Scalar(0, 255, 255));
+            cv::imshow("tmp contour", src);
+            cv::waitKey(0);
         }
 
         if (0.3 < k && k < 1.6 && rect.area() > 5000 && judgeIfRect(approxCurve, contours[i])) {
@@ -217,7 +223,9 @@ bool ARCore::locateZYJBoard(const cv::Mat & frame, cv::vector<cv::Point2d> & sor
         //std::vector<cv::Point>(approxCurve).swap(approxCurve);
     }
     if (progress && innerIndexRecord.size() == 0) {
-        cv::imwrite("notRecog.png", src);
+        static int index_notRecog = 0;
+        cv::imwrite("notRecog/notRecog" + std::to_string(index_notRecog) + ".png", src);
+        index_notRecog++;
     }
     //2. get the inner contours
     cv::vector<cv::Point> contour_rect = {};    //inner rectangle
@@ -286,6 +294,18 @@ void ARCore::setZYJBoard(double length) {
     zyjBoardCorner3dCoords.push_back({ zyjBoardLength, 0.0, 0.0 });                   //(1,0,0)
     zyjBoardCorner3dCoords.push_back({ zyjBoardLength, zyjBoardLength, 0.0 });      //(1,1,0)
     zyjBoardCorner3dCoords.push_back({ 0.0, zyjBoardLength, 0.0 });                 //(0,1,0)
+}
+
+cv::Mat ARCore::undistort(const cv::Mat & frame) {
+    cv::Mat result;
+    cv::Mat mapx = cv::Mat(frame.size(), CV_32FC1);
+    cv::Mat mapy = cv::Mat(frame.size(), CV_32FC1);
+    cv::Mat R = cv::Mat::eye(3, 3, CV_32F);
+
+    cv::initUndistortRectifyMap(cameraMatrix, distCoeffs, R, cameraMatrix, frame.size(), CV_32FC1, mapx, mapy);
+    cv::remap(frame, result, mapx, mapy, INTER_LINEAR);
+
+    return result;
 }
 
 /////////////////////////////////////////
@@ -359,10 +379,10 @@ void ARCore::drawZYJBoardCube(cv::Mat & frame, double boardLength, const CameraP
     _cube3dPoints.push_back({ boardLength, boardLength, 0.0 });         // (1,1,0)
     _cube3dPoints.push_back({ 0.0, boardLength, 0.0 });                 // (0,1,0)
 
-    _cube3dPoints.push_back({ 0.0, 0.0, boardLength });                 // (0,0,1)
-    _cube3dPoints.push_back({ boardLength, 0.0, boardLength });         // (1,0,1)
-    _cube3dPoints.push_back({ boardLength, boardLength, boardLength }); // (1,1,1)
-    _cube3dPoints.push_back({ 0.0, boardLength, boardLength });         // (0,1,1)
+    _cube3dPoints.push_back({ 0.0, 0.0, -boardLength });                 // (0,0,1)
+    _cube3dPoints.push_back({ boardLength, 0.0, -boardLength });         // (1,0,1)
+    _cube3dPoints.push_back({ boardLength, boardLength, -boardLength }); // (1,1,1)
+    _cube3dPoints.push_back({ 0.0, boardLength, -boardLength });         // (0,1,1)
 
     vector<Point2d> projectedPoints;
     projectPoints(_cube3dPoints, camPose.rvec, camPose.tvec, cameraMatrix, distCoeffs, projectedPoints);
@@ -584,17 +604,6 @@ void ARCore::drawCube(cv::Mat & frame, cv::Point3d original, double width, doubl
         if (i>6) line(frame, projectedPoints[i], projectedPoints[4], { 255,255,255 }, 1, 1);
     }
 }
-
-//void ARCore::void drawCylinderLine(cv::Mat & frame, cv::Point3d original, double radius, double height, const CameraPose & camPose, cv::Scalar lineColor, int thickness) {
-//    Vec3d _bottomCircleCenter = { original.x, original.y, original.z};
-//    Vec3d topCircleCenter = { original.x, original.y, original.z + height};
-//    Vec3d firstTangent = {};
-//    Vec3d secondTangent = {};
-//
-//    assert(radius > 0 && height > 0);
-//
-//
-//}
 
 bool ARCore::judgeIfRect(vector<Point> corners, vector<Point2i> contour) {
     if (corners.size() != 4)
