@@ -35,8 +35,8 @@ struct CubeData : public DrawableData
 {
     cv::Point3d pos;
     double width = 50;
-    double length = -50;
-    double height = 50;
+    double length = 50;
+    double height = -50;
     CubeData()
     {
         type = DrawableType::eCube;
