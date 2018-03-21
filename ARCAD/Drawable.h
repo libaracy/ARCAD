@@ -61,6 +61,9 @@ class Cube : public Drawable
     DEFINE_SIMPLE_PROPERTY(int, x, pos.x)
     DEFINE_SIMPLE_PROPERTY(int, y, pos.y)
     DEFINE_SIMPLE_PROPERTY(int, z, pos.z)
+    DEFINE_SIMPLE_PROPERTY(int, width, width)
+    DEFINE_SIMPLE_PROPERTY(int, length, length)
+    DEFINE_SIMPLE_PROPERTY(int, height, height)
 
     CubeData& modify()
     {
