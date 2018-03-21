@@ -76,7 +76,7 @@ void demo(string videoname) {
                 arCore.setVTKCamera(camPose);
 
                 if (s_showSpongeBob)
-                    arCore.combineVTK2Frame(frame);
+                    arCore.combineVTK2Frame(frame, camPose);
 
                 //step3. draw cube
                 //arCore.drawZYJBoardCube(frame, 116, camPose);
