@@ -865,6 +865,8 @@ Point ARCore::getTheNearestCorner(vector<Point2d> MarkerContour, Point2d point) 
 }
 
 void ARCore::contoursMat2Vec(const std::vector<cv::Mat> & contoursMat, std::vector<std::vector<cv::Point>> & contours, const cv::Mat & hierarchyMat, std::vector<cv::Vec4i> & hierarchy) {
+    if (contoursMat.size() == 0)
+        return;
     for (int itemIndex = 0; itemIndex < contoursMat.size(); itemIndex++) {
         std::vector<cv::Point> contourItem = {};
 
