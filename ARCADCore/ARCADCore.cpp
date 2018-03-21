@@ -98,14 +98,14 @@ void demo(string videoname) {
 
                     for (int i = 0; i <= size; i++)
                     {
-                        cv::Vec3d startp = { origin[0], origin[1] + step * i, origin[2] };
-                        cv::Vec3d endp = { origin[0] + step * size, origin[1] + step * i, origin[2] };
+                        cv::Vec3d startp = { origin[0], origin[1], origin[2] + step * i };
+                        cv::Vec3d endp = { origin[0] + step * size, origin[1], origin[2] + step * i };
                         arCore.drawPolyLine(frame, { startp, endp }, false, camPose);
                     }
                     for (int i = 0; i <= size; i++)
                     {
                         cv::Vec3d startp = { origin[0] + step * i, origin[1], origin[2] };
-                        cv::Vec3d endp = { origin[0] + step * i, origin[1] + step * size, origin[2] };
+                        cv::Vec3d endp = { origin[0] + step * i, origin[1], origin[2] + step * size };
                         arCore.drawPolyLine(frame, { startp, endp }, false, camPose);
                     }
                 }
