@@ -82,7 +82,7 @@ public:
     bool grabCalibrationFrames(string videoname, std::vector<cv::Mat> & images4calib);
     bool calcCamPoseFromFrame(const cv::Mat & frame, CameraPose & camPose);
     bool locateZYJBoard(const cv::Mat & frame, std::vector<cv::Point2d> & sortedCorners, bool progress);
-
+    cv::Mat undistort(const cv::Mat & frame);
 public:
     void saveCalibrationResult();
     void readCalibrationResult();
@@ -93,7 +93,6 @@ public:
     void drawPlane(cv::Mat & frame, vector<Vec3d> planeCorners, const CameraPose & camPose, cv::Scalar planeColor = { 0,0,255 }, cv::Scalar borderColor = { 255,255,255 }, int thickness = 1);
     void drawCubeLine(cv::Mat & frame, cv::Point3d original, double width, double length, double height, const CameraPose & camPose, cv::Scalar lineColor = { 0,0,255 }, int thickness = 1);
     void drawCube(cv::Mat & frame, cv::Point3d original, double width, double length, double height, const CameraPose & camPose, cv::Scalar cubeColor = { 0,0,255 });
-    //void drawCylinderLine(cv::Mat & frame, cv::Point3d original, double radius, double height, const CameraPose & camPose, cv::Scalar lineColor = { 0,0,255 }, int thickness = 1);
 
 public:
     void initVTK(bool progress = false);
