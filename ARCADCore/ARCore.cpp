@@ -9,9 +9,9 @@ ARCore::ARCore() {}
 /////////////////////////////////////////
 // description: init
 /////////////////////////////////////////
-void ARCore::init(double zyjBoardLength) {
+void ARCore::init(double zyjBoardLength, bool showVTK) {
     setZYJBoard(zyjBoardLength);
-    initVTK();
+    initVTK({ 1280,720 }, showVTK);
 }
 
 /////////////////////////////////////////
@@ -296,6 +296,10 @@ void ARCore::setZYJBoard(double length) {
     zyjBoardCorner3dCoords.push_back({ 0.0, zyjBoardLength, 0.0 });                 //(0,1,0)
 }
 
+/////////////////////////////////////////
+// description: undistort the image considering camera distortion
+// params - frame: the frame to distort
+/////////////////////////////////////////
 cv::Mat ARCore::undistort(const cv::Mat & frame) {
     cv::Mat result;
     cv::Mat mapx = cv::Mat(frame.size(), CV_32FC1);
@@ -309,34 +313,228 @@ cv::Mat ARCore::undistort(const cv::Mat & frame) {
 }
 
 /////////////////////////////////////////
+// description: undistort the points considering camera distortion
+// params - points: the points to distort
+/////////////////////////////////////////
+cv::vector<cv::Point2d> ARCore::undistort(const cv::vector<cv::Point2d> & points) {
+    cv::vector<Point2d> scene_corners = {};
+    undistortPoints(points, scene_corners, cameraMatrix, distCoeffs, cv::noArray(), cameraMatrix);
+
+    return scene_corners;
+}
+
+/////////////////////////////////////////
 // description: use VTK as the render engine, init the VTK here
 // notice: this function could be called by init()
 // param: progress - if show the vtk window
 /////////////////////////////////////////
-void ARCore::initVTK(bool progress) {
+void ARCore::initVTK(cv::Size windowSize, bool showVTK) {
     render->SetBackground(0, 0, 0);
     aCamera->SetViewUp(0, 0, -1);
     aCamera->SetPosition(0, 5, 0);
     aCamera->SetFocalPoint(0, 0, 0);
     aCamera->ComputeViewPlaneNormal();
     render->SetActiveCamera(aCamera);
+    renWin->SetSize(windowSize.width, windowSize.height);
     renWin->AddRenderer(render);
-    if (!progress) {
+    if (!showVTK) {
         renWin->SetOffScreenRendering(1);
     }
+    renWin->Render();
+    std::cout << "Position: " << render->GetActiveCamera()->GetPosition()[0] << " - " << render->GetActiveCamera()->GetPosition()[1] << " - " << render->GetActiveCamera()->GetPosition()[2] << std::endl;
+    std::cout << "Focus: " << render->GetActiveCamera()->GetFocalPoint()[0] << " - " << render->GetActiveCamera()->GetFocalPoint()[1] << " - " << render->GetActiveCamera()->GetFocalPoint()[3] << std::endl;
+    std::cout << "ViewUp: " << render->GetActiveCamera()->GetViewUp()[0] << " - " << render->GetActiveCamera()->GetViewUp()[1] << " - " << render->GetActiveCamera()->GetViewUp()[2] << std::endl;
 }
 
 /////////////////////////////////////////
 // description: set VTK Camera information
 // params - camPose: the camera pose
-// return - vtkImg: VTK render result
 /////////////////////////////////////////
-void ARCore::setVTKCamera(const CameraPose & camPose) {
-    // set camera position
+void ARCore::initVTKCamera(const CameraPose & camPose) {
+    static bool initialized = false;
+    if (!initialized && camPose.flag) {
+        // set camera position
+        aCamera->SetPosition(camPose.tvec.at<double>(0, 0), camPose.tvec.at<double>(1, 0), camPose.tvec.at<double>(2, 0));
+        // set camera pose
+        cv::Mat upLine = cv::Mat::zeros(cv::Size(1, 3), CV_64FC1);
+        upLine.at<double>(0, 0) = .0;
+        upLine.at<double>(1, 0) = 1.0;
+        upLine.at<double>(2, 0) = .0;
+        cv::Mat upNewLine = camPose.rotationMatrix * upLine;
+
+        std::cout << "(0,0) = " << upNewLine.at<double>(0, 0) << "  (1,0) = " << upNewLine.at<double>(1, 0) << "  (2,0) = " << upNewLine.at<double>(2, 0) << std::endl;
+        aCamera->SetViewUp(upNewLine.at<double>(0, 0), upNewLine.at<double>(1, 0), upNewLine.at<double>(2, 0));
+
+        initialized = true;
+    }
+}
+
+void ARCore::moveVTKCamera(const CameraPose & camPose) {
+    if (camPose.cached) {
+        /*
+        vtkSmartPointer<vtkTransform> trans = vtkSmartPointer<vtkTransform>::New();
+        vtkSmartPointer<vtkMatrix4x4> m = vtkSmartPointer<vtkMatrix4x4>::New();
+        double ma[4][4] = { { camPose.dR.at<double>(0,0), camPose.dR.at<double>(0,1), camPose.dR.at<double>(0,2), camPose.dT.at<double>(0,0) },
+        { camPose.dR.at<double>(1,0), camPose.dR.at<double>(1,1), camPose.dR.at<double>(1,2), camPose.dT.at<double>(1,0) },
+        { camPose.dR.at<double>(2,0), camPose.dR.at<double>(2,1), camPose.dR.at<double>(2,2), camPose.dT.at<double>(2,0) },
+        { 0, 0, 0, 1} };
+        for (int i = 0; i<4; i++)
+        {
+        for (int j = 0; j<4; j++)
+        {
+        m->SetElement(i, j, ma[i][j]);
+        }
+        }
+        trans->SetMatrix(m);
+        aCamera->ApplyTransform(trans);
+        */
+        cv::Mat oupLine = cv::Mat::zeros(cv::Size(1, 3), CV_64FC1);
+        oupLine.at<double>(0, 0) = .0;
+        oupLine.at<double>(1, 0) = 1;
+        oupLine.at<double>(2, 0) = 0;
+        cv::Mat upLine = camPose.rotationMatrix * oupLine;
+        std::cout << "(0, 0) = " << upLine.at<double>(0, 0) << "  (1, 0) = " << upLine.at<double>(1, 0) << "  (2, 0) = " << upLine.at<double>(2, 0) << std::endl;
+        aCamera->SetViewUp(upLine.at<double>(0, 0), upLine.at<double>(1, 0), upLine.at<double>(2, 0));
+        aCamera->ComputeViewPlaneNormal();
+        //aCamera->ParallelProjectionOff();
+        render->SetActiveCamera(aCamera);
+        render->ResetCamera();
+        renWin->Render();
+    }
+}
+
+void ARCore::setVTKCamera(const CameraPose & camPose, double dx, double dy) {
+    std::cout << "camera position   (0, 0) = " << camPose.tvec.at<double>(0, 0) << "  (1, 0) = " << camPose.tvec.at<double>(1, 0) << "  (2, 0) = " << camPose.tvec.at<double>(2, 0) << std::endl;
+    //1. position
     aCamera->SetPosition(camPose.tvec.at<double>(0, 0), camPose.tvec.at<double>(1, 0), camPose.tvec.at<double>(2, 0));
-    // set camera pose
-    //cv::Mat Py = camPose.rotationMatrix
-    //aCamera->SetViewUp();
+
+    //2. focus
+    //std::cout << "camera inner matrix   fx = " << cameraMatrix.at<double>(0, 0) * dx << "  fy = " << cameraMatrix.at<double>(1, 1) * dy << std::endl;
+    cv::Mat pos_focusInCamera = cv::Mat::zeros(cv::Size(1, 4), CV_64FC1);
+    cv::Mat pos_Focus = cv::Mat::zeros(cv::Size(1, 4), CV_64FC1);
+    pos_focusInCamera.at<double>(0, 0) = 0.0;
+    pos_focusInCamera.at<double>(1, 0) = 0.0;
+    pos_focusInCamera.at<double>(2, 0) = cameraMatrix.at<double>(0, 0) * dx;
+    pos_focusInCamera.at<double>(3, 0) = 1.0;
+    cv::Mat transformMat = cv::Mat::zeros(cv::Size(4, 4), CV_64FC1);
+    transformMat.at<double>(0, 0) = camPose.rotationMatrix.at<double>(0, 0);
+    transformMat.at<double>(0, 1) = camPose.rotationMatrix.at<double>(0, 1);
+    transformMat.at<double>(0, 2) = camPose.rotationMatrix.at<double>(0, 2);
+    transformMat.at<double>(0, 3) = camPose.tvec.at<double>(0, 0);
+
+    transformMat.at<double>(1, 0) = camPose.rotationMatrix.at<double>(1, 0);
+    transformMat.at<double>(1, 1) = camPose.rotationMatrix.at<double>(1, 1);
+    transformMat.at<double>(1, 2) = camPose.rotationMatrix.at<double>(1, 2);
+    transformMat.at<double>(1, 3) = camPose.tvec.at<double>(1, 0);
+
+    transformMat.at<double>(2, 0) = camPose.rotationMatrix.at<double>(2, 0);
+    transformMat.at<double>(2, 1) = camPose.rotationMatrix.at<double>(2, 1);
+    transformMat.at<double>(2, 2) = camPose.rotationMatrix.at<double>(2, 2);
+    transformMat.at<double>(2, 3) = camPose.tvec.at<double>(2, 0);
+
+    transformMat.at<double>(3, 0) = 0.0;
+    transformMat.at<double>(3, 1) = 0.0;
+    transformMat.at<double>(3, 2) = 0.0;
+    transformMat.at<double>(3, 3) = 1.0;
+
+    pos_Focus = transformMat * pos_focusInCamera;
+    std::cout << "camera focus   x = " << pos_Focus.at<double>(0, 0) << "  y = " << pos_Focus.at<double>(1, 0) << " z = " << pos_Focus.at<double>(2, 0) << std::endl;
+    aCamera->SetFocalPoint(pos_Focus.at<double>(0, 0), pos_Focus.at<double>(1, 0), pos_Focus.at<double>(2, 0));
+
+    //3. viewUp
+    cv::Mat viewUpInCamera = cv::Mat::zeros(cv::Size(1, 4), CV_64FC1);
+    viewUpInCamera.at<double>(0, 0) = 0.0;
+    viewUpInCamera.at<double>(1, 0) = 0.0;
+    viewUpInCamera.at<double>(2, 0) = 0.0;
+    viewUpInCamera.at<double>(3, 0) = 0.0;
+    cv::Mat viewUp = cv::Mat::zeros(cv::Size(1, 4), CV_64FC1);
+    viewUp = transformMat * viewUpInCamera;
+    aCamera->SetViewUp(viewUp.at<double>(0, 0), viewUp.at<double>(1, 0), viewUp.at<double>(2, 0));
+    std::cout << "camera viewup   x = " << viewUp.at<double>(0, 0) << "  y = " << viewUp.at<double>(1, 0) << " z = " << viewUp.at<double>(2, 0) << std::endl;
+
+    //4. view angle
+    aCamera->SetViewAngle(65);
+
+    aCamera->ComputeViewPlaneNormal();
+    aCamera->ParallelProjectionOff();
+    render->SetActiveCamera(aCamera);
+    render->ResetCamera();
+    renWin->Render();
+}
+
+void ARCore::setVTKWindowSize(const cv::Mat & frame) {
+    renWin->SetSize(frame.size().width, frame.size().height);
+}
+
+void ARCore::addCone2VTK(double height, double radius, int resolution) {
+    vtkConeSource *cone = vtkConeSource::New();
+    cone->SetHeight(height);
+    cone->SetRadius(radius);
+    cone->SetResolution(resolution);
+    vtkPolyDataMapper *coneMapper = vtkPolyDataMapper::New();
+    coneMapper->SetInputConnection(cone->GetOutputPort());
+    vtkActor *coneActor = vtkActor::New();
+    coneActor->SetMapper(coneMapper);
+    render->AddActor(coneActor);
+    coneActor->SetPosition(0, 0, 0);
+    render->ResetCamera();
+    renWin->Render();
+}
+
+void ARCore::addSpongeBob2VTK() {
+    //1. read obj
+    std::string filename = "spongebob.obj";
+    vtkSmartPointer<vtkOBJReader> reader = vtkSmartPointer<vtkOBJReader>::New();
+    reader->SetFileName(filename.c_str());
+    reader->Update();
+
+    vtkSmartPointer<vtkPolyDataMapper> mapper =
+        vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper->SetInputConnection(reader->GetOutputPort());
+
+    //2. read texture
+    vtkSmartPointer<vtkPNGReader>bmpReader = vtkSmartPointer<vtkPNGReader>::New();
+    bmpReader->SetFileName("spongebob.png");
+    vtkSmartPointer<vtkTexture>texture = vtkSmartPointer<vtkTexture>::New();
+    texture->SetInputConnection(bmpReader->GetOutputPort());
+    texture->InterpolateOn();
+
+    vtkSmartPointer<vtkActor> actor =
+        vtkSmartPointer<vtkActor>::New();
+    actor->SetMapper(mapper);
+    actor->SetTexture(texture);
+    //actor->RotateZ(180);
+    //actor->RotateX(180);
+    actor->RotateY(180);
+
+    render->AddActor(actor);
+}
+
+bool ARCore::combineVTK2Frame(cv::Mat & frame) {
+    cv::Mat vtkFrame, vtkFrameClone;
+    getFrameFromVTK(vtkFrame, false);
+    vtkFrameClone = vtkFrame.clone();
+
+    assert(vtkFrameClone.size() == frame.size());
+
+    if (vtkFrameClone.size() == frame.size()) {
+        for (int row = 0; row < frame.rows; row++) {
+            for (int col = 0; col < frame.cols; col++) {
+                cv::Vec3b vtkColor = { 0, 0, 0 };
+                vtkColor[0] = vtkFrameClone.at<cv::Vec3b>(row, col)[0];
+                vtkColor[1] = vtkFrameClone.at<cv::Vec3b>(row, col)[1];
+                vtkColor[2] = vtkFrameClone.at<cv::Vec3b>(row, col)[2];
+                if (vtkColor[0] != 0 && vtkColor[1] != 0 && vtkColor[2] != 0) {
+                    frame.at<cv::Vec3b>(row, col)[0] = vtkColor[0];
+                    frame.at<cv::Vec3b>(row, col)[1] = vtkColor[1];
+                    frame.at<cv::Vec3b>(row, col)[2] = vtkColor[2];
+                }
+            }
+        }
+        return true;
+    }
+
+    return false;
 }
 
 /////////////////////////////////////////
@@ -344,7 +542,7 @@ void ARCore::setVTKCamera(const CameraPose & camPose) {
 // params - camPose: the camera pose
 // return - vtkImg: VTK render result
 /////////////////////////////////////////
-cv::Mat ARCore::getFrameFromVTK(bool progress) {
+void ARCore::getFrameFromVTK(cv::Mat & vtkImg, bool progress) {
     renWin->Render();
     vtkSmartPointer<vtkWindowToImageFilter> windowToImageFilter =
         vtkSmartPointer<vtkWindowToImageFilter>::New();
@@ -353,13 +551,12 @@ cv::Mat ARCore::getFrameFromVTK(bool progress) {
     vtkSmartPointer<vtkImageWriter> imgWriter = vtkSmartPointer<vtkImageWriter>::New();
     imgWriter->SetInputConnection(windowToImageFilter->GetOutputPort());
     vtkImageData *imgRendered = imgWriter->GetImageDataInput(0);
-    cv::Mat vtkImg = vtkImage2Mat(imgRendered);
+    vtkImage2Mat(imgRendered, vtkImg);
+    cv::flip(vtkImg, vtkImg, 0);
     if (progress) {
         cv::imshow("vtk frame", vtkImg);
         cv::waitKey(0);
     }
-
-    return vtkImg;
 }
 
 /////////////////////////////////////////
@@ -407,6 +604,7 @@ void ARCore::drawPoint(cv::Mat & frame, cv::Point3d original, const CameraPose &
     vector<Vec3d> _Point = { original };
     vector<Point2d> projectedPoint;
     projectPoints(_Point, camPose.rvec, camPose.tvec, cameraMatrix, distCoeffs, projectedPoint);
+    //projectedPoint = undistort(projectedPoint);
     cv::circle(frame, projectedPoint[0], thickness, pointColor, -1);
 }
 
@@ -416,6 +614,7 @@ void ARCore::drawPolyLine(cv::Mat & frame, vector<Vec3d> polyPoints, bool closed
 
     std::vector<Point2d> projectedPoints = {};
     projectPoints(polyPoints, camPose.rvec, camPose.tvec, cameraMatrix, distCoeffs, projectedPoints);
+    //projectedPoints = undistort(projectedPoints);
 
     //collect points
     Point points[1][20000];
@@ -434,6 +633,7 @@ void ARCore::drawPlane(cv::Mat & frame, vector<Vec3d> planeCorners, const Camera
 
     std::vector<Point2d> projectedPoints = {};
     projectPoints(planeCorners, camPose.rvec, camPose.tvec, cameraMatrix, distCoeffs, projectedPoints);
+    //projectedPoints = undistort(projectedPoints);
 
     //collect points
     Point points[1][20000];
@@ -464,6 +664,7 @@ void ARCore::drawCubeLine(cv::Mat & frame, cv::Point3d original, double width, d
 
     vector<Point2d> projectedPoints;
     projectPoints(_cube3dPoints, camPose.rvec, camPose.tvec, cameraMatrix, distCoeffs, projectedPoints);
+    //projectedPoints = undistort(projectedPoints);
 
     for (int i = 0; i<4; i++) {
         if (i <= 2) line(frame, projectedPoints[i], projectedPoints[i + 1], lineColor, thickness, 4);
@@ -496,6 +697,7 @@ void ARCore::drawCube(cv::Mat & frame, cv::Point3d original, double width, doubl
 
     vector<Point2d> projectedPoints;
     projectPoints(_cube3dPoints, camPose.rvec, camPose.tvec, cameraMatrix, distCoeffs, projectedPoints);
+    //projectedPoints = undistort(projectedPoints);
 
     if (!(projectedPoints[0].x <= 1000000 && projectedPoints[0].y <= 1000000
         && projectedPoints[1].x <= 1000000 && projectedPoints[1].y <= 1000000
@@ -721,7 +923,7 @@ void ARCore::readCalibrationResult() {
     inf2.close();
 }
 
-cv::Mat ARCore::vtkImage2Mat(vtkImageData *image)
+void ARCore::vtkImage2Mat(vtkImageData *image, cv::Mat & vtkImg)
 {
     int dim[3];
     image->GetDimensions(dim);
@@ -731,8 +933,6 @@ cv::Mat ARCore::vtkImage2Mat(vtkImageData *image)
     if (image->GetNumberOfScalarComponents() == 3)
         imgType = CV_8UC3;
 
-    cv::Mat matSrc(dim[1], dim[0], imgType, image->GetScalarPointer());
-    cv::cvtColor(matSrc, matSrc, CV_BGR2RGB);
-
-    return matSrc;
+    cv::Mat tmp(dim[1], dim[0], imgType, image->GetScalarPointer());
+    cv::cvtColor(tmp, vtkImg, CV_BGR2RGB);
 }

@@ -32,19 +32,19 @@ void setDisplayData(DisplayData&& data)
 }
 
 void demo(string videoname) {
-    cv::VideoCapture capture(videoname);
+    cv::VideoCapture capture(1);
     ARCore arCore;
-    arCore.init(116.0);
+    arCore.init(116.0, false);
+    arCore.addSpongeBob2VTK();
+
     //step1. calibration
     std::vector<cv::Mat> images4calib = {};
-    //arCore.grabCalibrationFrames(videoname, images4calib);
-    /*if (!arCore.calibrationNow(images4calib)) {
-        std::cout << "calibration failed!" << std::endl;
-        return;
-    }*/
-    //arCore.saveCalibrationResult();
     arCore.readCalibrationResult();
 
+    if (!capture.isOpened())
+        return;
+
+    CameraPose camPose = {};
     while (1) {
         auto pFrame = std::make_shared<cv::Mat>();
         auto& frame = *pFrame;
@@ -58,8 +58,12 @@ void demo(string videoname) {
         }
         else {
             //step2. calculate frame
-            CameraPose camPose = {};
             if (arCore.calcCamPoseFromFrame(frame, camPose)) {
+                //test spongebob
+                arCore.setVTKWindowSize(frame);
+                arCore.setVTKCamera(camPose);
+                arCore.combineVTK2Frame(frame);
+
                 //step3. draw cube
                 //arCore.drawZYJBoardCube(frame, 116, camPose);
                 //arCore.drawPoint(frame, { 0, 0, -30 }, camPose, {255,255,0}, 3);

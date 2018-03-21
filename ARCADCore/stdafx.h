@@ -13,6 +13,7 @@
 
 
 // TODO: reference additional headers your program requires here
+////OpenCV
 #include "opencv2/core/core_c.h"
 #include "opencv2/core/core.hpp"
 #include "opencv2/flann/miniflann.hpp"
@@ -38,7 +39,15 @@
 #include <vtkAutoInit.h>
 #include "vtkInteractorStyleTrackballActor.h"
 #include "vtkRenderWindow.h"  
-#include "vtkRenderWindowInteractor.h" 
+#include "vtkRenderWindowInteractor.h"
+#include "vtkImageData.h"
+#include "vtkImageActor.h"
+#include "vtkInformation.h"
+#include "vtkImageImport.h"
+#include "vtkWindowToImageFilter.h"
+#include "vtkImageWriter.h"
+#include "vtkOBJReader.h"
+#include "vtkTransform.h"
 VTK_MODULE_INIT(vtkRenderingOpenGL2);
 VTK_MODULE_INIT(vtkInteractionStyle);
 ////BOOST

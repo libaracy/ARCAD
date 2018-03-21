@@ -22,7 +22,7 @@
 #include "vtkActor.h"
 #include "vtkRenderer.h"
 #include "vtkProperty.h"
-#include <vtkAutoInit.h>
+#include "vtkAutoInit.h"
 #include "vtkInteractorStyleTrackballActor.h"
 #include "vtkRenderWindow.h"  
 #include "vtkRenderWindowInteractor.h"
@@ -32,6 +32,13 @@
 #include "vtkImageImport.h"
 #include "vtkWindowToImageFilter.h"
 #include "vtkImageWriter.h"
+#include "vtkOBJReader.h"
+#include "vtkStructuredPoints.h"
+#include "vtkStructuredPointsReader.h"
+#include "vtkVolumeTexture.h"
+#include "vtkColorTransferFunction.h"
+#include "vtkPNGReader.h"
+#include "vtkTransform.h"
 ////BOOST
 #include <boost/serialization/split_free.hpp>  
 #include <boost/serialization/vector.hpp>
@@ -57,7 +64,14 @@ public:
     Mat rotationMatrix = Mat::zeros(3, 3, CV_32FC1);
     Mat rvec = Mat::zeros(1, 3, CV_32FC1);
     Mat tvec = Mat::zeros(1, 3, CV_32FC1);
-    bool flag = false;
+    bool flag = false;                                  //judge if been setted
+public:
+    Mat lastRotationMatrix = Mat::zeros(3, 3, CV_32FC1);
+    Mat lastRVec = Mat::zeros(1, 3, CV_32FC1);
+    Mat lastTVec = Mat::zeros(1, 3, CV_32FC1);
+    cv::Mat dR = Mat::zeros(3, 3, CV_32FC1);
+    cv::Mat dT = Mat::zeros(1, 3, CV_32FC1);
+    bool cached = false;                                //judge if been setted
 };
 inline CameraPose::CameraPose() {
     flag = false;
@@ -67,22 +81,44 @@ inline CameraPose::CameraPose(const Mat & rotation, const Mat & transform) :rvec
     Rodrigues(rotation, rotationMatrix);
 }
 inline void CameraPose::setPose(const Mat & rotation, const Mat & transform) {
-    flag = true;
-    rvec = rotation.clone();
-    tvec = transform.clone();
-    Rodrigues(rotation, rotationMatrix);
+    if (flag) {
+        //1. set cache
+        lastRotationMatrix = rotationMatrix;
+        lastRVec = rvec;
+        lastTVec = tvec;
+        cached = true;
+        //2. set currency
+        rvec = rotation.clone();
+        tvec = transform.clone();
+        Rodrigues(rotation, rotationMatrix);
+        flag = true;
+        //3. set relation between cache and currency
+        cv::Mat invertLastR;
+        cv::invert(lastRotationMatrix, invertLastR);
+        dR = invertLastR * rotationMatrix;
+        dT = tvec - lastTVec;
+    }
+    else {
+        rvec = rotation.clone();
+        tvec = transform.clone();
+        Rodrigues(rotation, rotationMatrix);
+        flag = true;
+    }
 }
 
 class ARCore {
 public:
     ARCore();
-    void init(double zyjBoardLength);
+    void init(double zyjBoardLength, bool showVTK = false);
+
 public:
     bool calibrationNow(const vector<cv::Mat> & frames);
     bool grabCalibrationFrames(string videoname, std::vector<cv::Mat> & images4calib);
     bool calcCamPoseFromFrame(const cv::Mat & frame, CameraPose & camPose);
     bool locateZYJBoard(const cv::Mat & frame, std::vector<cv::Point2d> & sortedCorners, bool progress);
     cv::Mat undistort(const cv::Mat & frame);
+    cv::vector<cv::Point2d> undistort(const cv::vector<cv::Point2d> & points);
+
 public:
     void saveCalibrationResult();
     void readCalibrationResult();
@@ -95,16 +131,23 @@ public:
     void drawCube(cv::Mat & frame, cv::Point3d original, double width, double length, double height, const CameraPose & camPose, cv::Scalar cubeColor = { 0,0,255 });
 
 public:
-    void initVTK(bool progress = false);
-    void setVTKCamera(const CameraPose & camPose);
-    cv::Mat getFrameFromVTK(bool progress = false);
-    cv::Mat vtkImage2Mat(vtkImageData *image);
+    void initVTK(cv::Size windowSize, bool showVTK = false);
+    void initVTKCamera(const CameraPose & camPose);
+    void moveVTKCamera(const CameraPose & camPose);
+    void setVTKCamera(const CameraPose & camPose, double dx = 0.008, double dy = 0.008);
+    void setVTKWindowSize(const cv::Mat & frame);
+    void addCone2VTK(double height, double radius, int resolution);
+    void addSpongeBob2VTK();
+    void getFrameFromVTK(cv::Mat & vtkImg, bool progress = false);
+    bool combineVTK2Frame(cv::Mat & frame);
+    void vtkImage2Mat(vtkImageData *image, cv::Mat & vtkImg);
 
 private:
     bool judgeIfRect(vector<Point> corners, vector<Point2i> contour);
     bool judgeIfOutZYJBoard(const std::vector<std::vector<cv::Point>> & contours, const vector<Vec4i> & hierarchy, int index, std::vector<int> & innerIndexRecord);
     Point getTheNearestCorner(vector<Point2d> MarkerContour, Point2d point);
     void contoursMat2Vec(const std::vector<cv::Mat> & contoursMat, std::vector<std::vector<cv::Point>> & contours, const cv::Mat & hierarchyMat, std::vector<cv::Vec4i> & hierarchy);
+
 public:
     //about calibration
     cv::Mat cameraMatrix = cv::Mat(3, 3, CV_32FC1, cv::Scalar::all(0)); /* the inner param matrix of camera */
