@@ -32,7 +32,7 @@ void setDisplayData(DisplayData&& data)
 }
 
 void demo(string videoname) {
-    cv::VideoCapture capture(1);
+    cv::VideoCapture capture("calib2.mp4");
     ARCore arCore;
     arCore.init(116.0, false);
     arCore.addSpongeBob2VTK();
