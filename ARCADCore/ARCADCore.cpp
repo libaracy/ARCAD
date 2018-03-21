@@ -19,6 +19,8 @@ void display()
 static std::function<void(FramePtr)> s_cb = nullptr;
 static DisplayData s_data;
 static std::mutex s_mutex;
+static bool s_showFloor = false;
+static bool s_showSpongeBob = false;
 
 void setDisplayCallback(std::function<void(FramePtr)> cb)
 {
@@ -29,6 +31,16 @@ void setDisplayData(DisplayData&& data)
 {
     std::lock_guard<std::mutex> guard(s_mutex);
     s_data = data;
+}
+
+void toggleFloor()
+{
+    s_showFloor = !s_showFloor;
+}
+
+void toggleSpongeBob()
+{
+    s_showSpongeBob = !s_showSpongeBob;
 }
 
 void demo(string videoname) {
@@ -62,7 +74,9 @@ void demo(string videoname) {
                 //test spongebob
                 arCore.setVTKWindowSize(frame);
                 arCore.setVTKCamera(camPose);
-                //arCore.combineVTK2Frame(frame, camPose);
+
+                if (s_showSpongeBob)
+                    arCore.combineVTK2Frame(frame);
 
                 //step3. draw cube
                 //arCore.drawZYJBoardCube(frame, 116, camPose);
@@ -75,6 +89,27 @@ void demo(string videoname) {
                 //test: draw any cube
                 //arCore.drawCubeLine(frame, { 0.0, 116.0, -30.0 }, 50, 40, -30, camPose, {0,0,255}, 2);
                 //arCore.drawCube(frame, { 116.0, 116.0, -40.0 }, 50, 50, -30, camPose, { 0,0,255 });
+
+                if (s_showFloor)
+                {
+                    const cv::Vec3d origin(-20, 171, 0);
+                    constexpr int size = 3;
+                    constexpr int step = 50;
+
+                    for (int i = 0; i <= size; i++)
+                    {
+                        cv::Vec3d startp = { origin[0], origin[1] + step * i, origin[2] };
+                        cv::Vec3d endp = { origin[0] + step * size, origin[1] + step * i, origin[2] };
+                        arCore.drawPolyLine(frame, { startp, endp }, false, camPose);
+                    }
+                    for (int i = 0; i <= size; i++)
+                    {
+                        cv::Vec3d startp = { origin[0] + step * i, origin[1], origin[2] };
+                        cv::Vec3d endp = { origin[0] + step * i, origin[1] + step * size, origin[2] };
+                        arCore.drawPolyLine(frame, { startp, endp }, false, camPose);
+                    }
+                }
+
                 std::lock_guard<std::mutex> guard(s_mutex);
                 for (auto& item : s_data)
                 {

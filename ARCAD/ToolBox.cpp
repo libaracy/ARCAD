@@ -1,10 +1,12 @@
 #include "stdafx.h"
 #include "ToolBox.h"
+#include "display.h"
 
 template <typename T>
 static QPushButton* createButton(ToolBox* toolbox)
 {
     QString text = T::staticMetaObject.className();
+    text = "Add " + text;
     QPushButton* btn = new QPushButton(text, toolbox);
     QObject::connect(btn, &QPushButton::clicked, [=]() {
         toolbox->requestAddDrawable(new T);
@@ -22,6 +24,14 @@ ToolBox::ToolBox(QWidget* parent)
     layout->addWidget(createButton<Cube>(this));
     layout->addWidget(createButton<LineCube>(this));
     layout->addWidget(createButton<PolyLine>(this));
+
+    QPushButton* btn = new QPushButton("Toggle Floor", this);
+    connect(btn, &QPushButton::clicked, toggleFloor);
+    layout->addWidget(btn);
+
+    btn = new QPushButton("Toggle SpongeBob", this);
+    connect(btn, &QPushButton::clicked, toggleSpongeBob);
+    layout->addWidget(btn);
 }
 
 
