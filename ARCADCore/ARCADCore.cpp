@@ -5,6 +5,7 @@
 #include "ARCore.h"
 #define CORE_EXPORT
 #include "display.h"
+#include <mutex>
 
 void demo(string videoname);
 void testLocateZYJBoard();
@@ -15,18 +16,25 @@ void display()
     //testLocateZYJBoard();
 }
 
-static std::function<void(FramePtr)> g_cb = nullptr;
+static std::function<void(FramePtr)> s_cb = nullptr;
+static DisplayData s_data;
+static std::mutex s_mutex;
 
 void setDisplayCallback(std::function<void(FramePtr)> cb)
 {
-    g_cb = cb;
+    s_cb = cb;
+}
+
+void setDisplayData(DisplayData&& data)
+{
+    std::lock_guard<std::mutex> guard(s_mutex);
+    s_data = data;
 }
 
 void demo(string videoname) {
     cv::VideoCapture capture(videoname);
     ARCore arCore;
     arCore.init(116.0);
-
     //step1. calibration
     std::vector<cv::Mat> images4calib = {};
     //arCore.grabCalibrationFrames(videoname, images4calib);
@@ -54,19 +62,53 @@ void demo(string videoname) {
             if (arCore.calcCamPoseFromFrame(frame, camPose)) {
                 //step3. draw cube
                 //arCore.drawZYJBoardCube(frame, 116, camPose);
-                arCore.drawPoint(frame, { 0, 0, -30 }, camPose, {255,255,0}, 3);
-                std::vector<cv::Vec3d> polyPoints = { {10,10,-10},  {21, 31, -10}, {42,31,-21}, {32, 43,-31}, {43, 55, -22}, 
-                {45,54, -34}, {65, 55, -44}, {75, 67, -44}, {100,150,-55}, {90, 90, -50},{70, 85, -45}, {65, 55, -30},
-                {54, 54, -44}, {44, 43, -33}, {33, 22, -32}, {21, 21, -15} };
-                arCore.drawPolyLine(frame, polyPoints, false, camPose, { 0, 255, 255 }, 1);
+                //arCore.drawPoint(frame, { 0, 0, -30 }, camPose, {255,255,0}, 3);
+                //std::vector<cv::Vec3d> polyPoints = { {10,10,-10},  {21, 31, -10}, {42,31,-21}, {32, 43,-31}, {43, 55, -22}, 
+                //{45,54, -34}, {65, 55, -44}, {75, 67, -44}, {100,150,-55}, {90, 90, -50},{70, 85, -45}, {65, 55, -30},
+                //{54, 54, -44}, {44, 43, -33}, {33, 22, -32}, {21, 21, -15} };
+                //arCore.drawPolyLine(frame, polyPoints, false, camPose, { 0, 255, 255 }, 1);
                 //arCore.drawCurveLine(frame, polyPoints, false, camPose, { 255, 0, 255 }, 2);
                 //test: draw any cube
-                arCore.drawCubeLine(frame, { 0.0, 116.0, -30.0 }, 50, 40, -30, camPose, {0,0,255}, 2);
-                arCore.drawCube(frame, { 116.0, 116.0, -40.0 }, 50, 50, -30, camPose, { 0,0,255 });
+                //arCore.drawCubeLine(frame, { 0.0, 116.0, -30.0 }, 50, 40, -30, camPose, {0,0,255}, 2);
+                //arCore.drawCube(frame, { 116.0, 116.0, -40.0 }, 50, 50, -30, camPose, { 0,0,255 });
+                std::lock_guard<std::mutex> guard(s_mutex);
+                for (auto& item : s_data)
+                {
+                    cv::Scalar color = { (double)item->color[2], (double)item->color[1], (double)item->color[0] };
+
+                    switch (item->type)
+                    {
+                    case DrawableType::ePoint:
+                    {
+                        auto pData = static_cast<const PointData*>(item.get());
+                        arCore.drawPoint(frame, pData->pos, camPose, color, pData->thickness);
+                    }
+                    case DrawableType::eCube:
+                    {
+                        auto pData = static_cast<const CubeData*>(item.get());
+                        arCore.drawCube(frame, pData->pos, pData->width, pData->length, pData->height, camPose, color);
+                        break;
+                    }
+                    case DrawableType::eLineCube:
+                    {
+                        auto pData = static_cast<const LineCubeData*>(item.get());
+                        arCore.drawCubeLine(frame, pData->pos, pData->width, pData->length, pData->height, camPose, color, pData->thickness);
+                        break;
+                    }
+                    case DrawableType::ePolyLine:
+                    {
+                        auto pData = static_cast<const PolyLineData*>(item.get());
+                        arCore.drawPolyLine(frame, pData->vertexs, pData->closed, camPose, color, pData->thickness);
+                        break;
+                    }
+                    default:
+                        throw exception("impossible");
+                    }
+                }
             }
-            if (g_cb) {
+            if (s_cb) {
                 cv::cvtColor(frame, frame, CV_BGR2RGB);
-                g_cb(pFrame);
+                s_cb(pFrame);
             }
         }
         cv::waitKey(10);

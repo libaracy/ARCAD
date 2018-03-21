@@ -1,18 +1,35 @@
 #include "stdafx.h"
 #include "ARWidget.h"
 
+Q_DECLARE_METATYPE(FramePtr)
 
 ARWidget::ARWidget(QWidget* parent)
     :QWidget(parent)
 {
+    qRegisterMetaType<FramePtr>();
+
+    connect(this, &ARWidget::postFrame, this, &ARWidget::receiveFrame);
+
     setDisplayCallback([this](FramePtr frame) {
-        m_frame = frame;
-        update();
+        postFrame(frame);
     });
 
     std::thread(display).detach();
 }
 
+void ARWidget::receiveFrame(FramePtr frame)
+{
+    m_frame = frame;
+
+    QSize frameSize(m_frame->cols, m_frame->rows);
+    if (frameSize != size())
+    {
+        setFixedSize(frameSize);
+        sizeChanged();
+    }
+
+    update();
+}
 
 ARWidget::~ARWidget()
 {

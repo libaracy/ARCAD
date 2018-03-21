@@ -124,16 +124,24 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ARWidget.cpp" />
+    <ClCompile Include="Drawable.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MainWindow.cpp" />
+    <ClCompile Include="ObjectCollection.cpp" />
+    <ClCompile Include="PropertyPalette.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="ToolBox.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <QtMoc Include="ToolBox.h" />
     <QtMoc Include="MainWindow.h" />
     <QtMoc Include="ARWidget.h" />
+    <QtMoc Include="Drawable.h" />
+    <QtMoc Include="ObjectCollection.h" />
+    <ClInclude Include="PropertyPalette.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <ItemGroup>
