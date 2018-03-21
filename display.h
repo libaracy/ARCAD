@@ -17,3 +17,7 @@ CORE_EXPORT_API void setDisplayCallback(std::function<void(FramePtr)> cb);
 CORE_EXPORT_API void setDisplayData(DisplayData&& data);
 
 CORE_EXPORT_API void display();
+
+CORE_EXPORT_API void toggleFloor();
+
+CORE_EXPORT_API void toggleSpongeBob();
