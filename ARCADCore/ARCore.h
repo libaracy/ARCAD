@@ -129,17 +129,15 @@ public:
     void drawPlane(cv::Mat & frame, vector<Vec3d> planeCorners, const CameraPose & camPose, cv::Scalar planeColor = { 0,0,255 }, cv::Scalar borderColor = { 255,255,255 }, int thickness = 1);
     void drawCubeLine(cv::Mat & frame, cv::Point3d original, double width, double length, double height, const CameraPose & camPose, cv::Scalar lineColor = { 0,0,255 }, int thickness = 1);
     void drawCube(cv::Mat & frame, cv::Point3d original, double width, double length, double height, const CameraPose & camPose, cv::Scalar cubeColor = { 0,0,255 });
-
+    void drawCoordinate(cv::Mat & frame, const CameraPose & camPose);
 public:
     void initVTK(cv::Size windowSize, bool showVTK = false);
-    void initVTKCamera(const CameraPose & camPose);
-    void moveVTKCamera(const CameraPose & camPose);
     void setVTKCamera(const CameraPose & camPose, double dx = 0.008, double dy = 0.008);
     void setVTKWindowSize(const cv::Mat & frame);
     void addCone2VTK(double height, double radius, int resolution);
     void addSpongeBob2VTK();
     void getFrameFromVTK(cv::Mat & vtkImg, bool progress = false);
-    bool combineVTK2Frame(cv::Mat & frame);
+    bool combineVTK2Frame(cv::Mat & frame, const CameraPose & camPose);
     void vtkImage2Mat(vtkImageData *image, cv::Mat & vtkImg);
 
 private:

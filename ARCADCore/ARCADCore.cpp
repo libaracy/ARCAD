@@ -32,7 +32,7 @@ void setDisplayData(DisplayData&& data)
 }
 
 void demo(string videoname) {
-    cv::VideoCapture capture("calib2.mp4");
+    cv::VideoCapture capture(1);
     ARCore arCore;
     arCore.init(116.0, false);
     arCore.addSpongeBob2VTK();
@@ -62,7 +62,7 @@ void demo(string videoname) {
                 //test spongebob
                 arCore.setVTKWindowSize(frame);
                 arCore.setVTKCamera(camPose);
-                arCore.combineVTK2Frame(frame);
+                //arCore.combineVTK2Frame(frame, camPose);
 
                 //step3. draw cube
                 //arCore.drawZYJBoardCube(frame, 116, camPose);
@@ -111,6 +111,7 @@ void demo(string videoname) {
                 }
             }
             if (s_cb) {
+                arCore.undistort(frame);
                 cv::cvtColor(frame, frame, CV_BGR2RGB);
                 s_cb(pFrame);
             }
