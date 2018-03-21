@@ -5,7 +5,6 @@ template <typename T>
 static QPushButton* createButton(ToolBox* toolbox)
 {
     QString text = T::staticMetaObject.className();
-    text = "Add " + text;
     QPushButton* btn = new QPushButton(text, toolbox);
     QObject::connect(btn, &QPushButton::clicked, [=]() {
         toolbox->requestAddDrawable(new T);

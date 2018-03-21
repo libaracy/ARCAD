@@ -103,4 +103,6 @@ private:
     {
         return _modify<PolyLineData>();
     }
+
+    bool event(QEvent* e) override;
 };
