@@ -101,9 +101,15 @@ void PropertyPalette::setObject(QObject* obj)
         del->setEnabled(j > 3);
 
         connect(add, &QPushButton::clicked, [=]() {
-            m_obj->setProperty(("x" + std::to_string(j)).c_str(), 0);
-            m_obj->setProperty(("y" + std::to_string(j)).c_str(), 0);
-            m_obj->setProperty(("z" + std::to_string(j)).c_str(), 0);
+
+            int x = m_obj->property(("x" + std::to_string(j - 1)).c_str()).toInt();
+            int y = m_obj->property(("y" + std::to_string(j - 1)).c_str()).toInt();
+            int z = m_obj->property(("z" + std::to_string(j - 1)).c_str()).toInt();
+
+            m_obj->setProperty(("x" + std::to_string(j)).c_str(), x + qrand() % 30);
+            m_obj->setProperty(("y" + std::to_string(j)).c_str(), y + qrand() % 30);
+            m_obj->setProperty(("z" + std::to_string(j)).c_str(), z - qrand() % 30);
+
             setObject(m_obj);
         });
 

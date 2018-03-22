@@ -29,12 +29,20 @@ ToolBox::ToolBox(QWidget* parent)
     connect(btn, &QPushButton::clicked, toggleFloor);
     layout->addWidget(btn);
 
-    btn = new QPushButton("Toggle SpongeBob", this);
-    connect(btn, &QPushButton::clicked, toggleSpongeBob);
+    btn = new QPushButton("Toggle Coordinate", this);
+    connect(btn, &QPushButton::clicked, toggleCoordinate);
+    layout->addWidget(btn);
+
+    btn = new QPushButton("Toggle Animation", this);
+    connect(btn, &QPushButton::clicked, toggleAnimate);
     layout->addWidget(btn);
 
     btn = new QPushButton("Toggle AutoCAD", this);
     connect(btn, &QPushButton::clicked, toggleAutoCAD);
+    layout->addWidget(btn);
+
+    btn = new QPushButton("Toggle SpongeBob", this);
+    connect(btn, &QPushButton::clicked, toggleSpongeBob);
     layout->addWidget(btn);
 }
 

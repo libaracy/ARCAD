@@ -22,6 +22,8 @@ static std::mutex s_mutex;
 static bool s_showFloor = false;
 static bool s_showSpongeBob = false;
 static bool s_showAutoCAD = false;
+static bool s_showAnimate = false;
+static bool s_showCoordinate = false;
 
 void setDisplayCallback(std::function<void(FramePtr)> cb)
 {
@@ -49,6 +51,15 @@ void toggleAutoCAD()
     s_showAutoCAD = !s_showAutoCAD;
 }
 
+void toggleAnimate()
+{
+    s_showAnimate = !s_showAnimate;
+}
+
+void toggleCoordinate()
+{
+    s_showCoordinate != s_showCoordinate;
+}
 
 void demo(string videoname) {
     cv::VideoCapture capture(1);
@@ -85,8 +96,11 @@ void demo(string videoname) {
                 if (s_showSpongeBob)
                     arCore.combineVTK2Frame(frame, camPose);
 
-                arCore.drawCoordinate(frame, camPose);
-                arCore.drawAnimate(frame, camPose);
+                if (s_showCoordinate)
+                    arCore.drawCoordinate(frame, camPose);
+
+                if (s_showAnimate)
+                    arCore.drawAnimate(frame, camPose);
 
                 //step3. draw cube
                 //arCore.drawZYJBoardCube(frame, 116, camPose);
