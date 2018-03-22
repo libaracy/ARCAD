@@ -58,7 +58,7 @@ void toggleAnimate()
 
 void toggleCoordinate()
 {
-    s_showCoordinate != s_showCoordinate;
+    s_showCoordinate = !s_showCoordinate;
 }
 
 void demo(string videoname) {
@@ -206,6 +206,12 @@ void demo(string videoname) {
                     {
                         auto pData = static_cast<const PolyLineData*>(item.get());
                         arCore.drawPolyLine(frame, pData->vertexs, pData->closed, camPose, color, pData->thickness);
+                        break;
+                    }
+                    case DrawableType::ePlane:
+                    {
+                        auto pData = static_cast<const PlaneData*>(item.get());
+                        arCore.drawPlane(frame, pData->vertexs, camPose, color, color, pData->thickness);
                         break;
                     }
                     default:

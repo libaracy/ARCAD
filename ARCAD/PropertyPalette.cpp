@@ -61,7 +61,7 @@ void PropertyPalette::setObject(QObject* obj)
         setRowContent(i, name, value);
     }
 
-    if (typeid(*m_obj) == typeid(PolyLine))
+    if (typeid(*m_obj) == typeid(PolyLine) || typeid(*m_obj) == typeid(Plane))
     {
         int j = 3;
         for (; ; j++)

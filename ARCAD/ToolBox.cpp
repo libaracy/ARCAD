@@ -24,6 +24,7 @@ ToolBox::ToolBox(QWidget* parent)
     layout->addWidget(createButton<Cube>(this));
     layout->addWidget(createButton<LineCube>(this));
     layout->addWidget(createButton<PolyLine>(this));
+    layout->addWidget(createButton<Plane>(this));
 
     QPushButton* btn = new QPushButton("Toggle Floor", this);
     connect(btn, &QPushButton::clicked, toggleFloor);

@@ -8,6 +8,7 @@ enum class DrawableType
     eInvalid,
     ePoint,
     ePolyLine,
+    ePlane,
     eCube,
     eLineCube
 };
@@ -54,13 +55,25 @@ struct LineCubeData : public CubeData
 };
 
 
-struct PolyLineData : public DrawableData
+struct PolyBaseData : public DrawableData
 {
-    std::vector<cv::Vec3d> vertexs = { {0, 0, 0}, {20,20, -20} };
-    bool closed = false;
+    std::vector<cv::Vec3d> vertexs = { {0, 0, 0}, {20, 20, -20} };
     int thickness = 2;
+};
+
+struct PolyLineData : public PolyBaseData
+{
+    bool closed = false;
     PolyLineData()
     {
         type = DrawableType::ePolyLine;
+    }
+};
+
+struct PlaneData : public PolyBaseData
+{
+    PlaneData()
+    {
+        type = DrawableType::ePlane;
     }
 };

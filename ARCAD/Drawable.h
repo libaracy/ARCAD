@@ -85,11 +85,10 @@ class LineCube : public Cube
 };
 
 
-class PolyLine : public Drawable
+class PolyBase : public Drawable
 {
     Q_OBJECT
 
-    DEFINE_SIMPLE_PROPERTY(bool, closed, closed)
     DEFINE_SIMPLE_PROPERTY(int, thickness, thickness)
     DEFINE_SIMPLE_PROPERTY(int, x1, vertexs[0][0])
     DEFINE_SIMPLE_PROPERTY(int, y1, vertexs[0][1])
@@ -98,11 +97,29 @@ class PolyLine : public Drawable
     DEFINE_SIMPLE_PROPERTY(int, y2, vertexs[1][1])
     DEFINE_SIMPLE_PROPERTY(int, z2, vertexs[1][2])
 
-private:
+    bool event(QEvent* e) override;
+
+    PolyBaseData & modify() = 0;
+};
+
+class PolyLine : public PolyBase
+{
+    Q_OBJECT
+
+    DEFINE_SIMPLE_PROPERTY(bool, closed, closed)
+
     PolyLineData & modify()
     {
         return _modify<PolyLineData>();
     }
+};
 
-    bool event(QEvent* e) override;
+class Plane : public PolyBase
+{
+    Q_OBJECT
+
+    PlaneData & modify()
+    {
+        return _modify<PlaneData>();
+    }
 };

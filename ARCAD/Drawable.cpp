@@ -2,7 +2,7 @@
 #include "Drawable.h"
 
 
-bool PolyLine::event(QEvent* e)
+bool PolyBase::event(QEvent* e)
 {
     if (e->type() == QEvent::DynamicPropertyChange)
     {
