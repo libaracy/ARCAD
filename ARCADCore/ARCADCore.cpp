@@ -21,6 +21,7 @@ static DisplayData s_data;
 static std::mutex s_mutex;
 static bool s_showFloor = false;
 static bool s_showSpongeBob = false;
+static bool s_showAutoCAD = false;
 
 void setDisplayCallback(std::function<void(FramePtr)> cb)
 {
@@ -42,6 +43,12 @@ void toggleSpongeBob()
 {
     s_showSpongeBob = !s_showSpongeBob;
 }
+
+void toggleAutoCAD()
+{
+    s_showAutoCAD = !s_showAutoCAD;
+}
+
 
 void demo(string videoname) {
     cv::VideoCapture capture(1);
@@ -107,6 +114,50 @@ void demo(string videoname) {
                         cv::Vec3d startp = { origin[0] + step * i, origin[1], origin[2] };
                         cv::Vec3d endp = { origin[0] + step * i, origin[1], origin[2] + step * size };
                         arCore.drawPolyLine(frame, { startp, endp }, false, camPose);
+                    }
+                }
+
+                if (s_showAutoCAD)
+                {
+                    constexpr int margin = 10;
+                    constexpr int content = 40;
+                    const char text[] = "AUTOCAD";
+                    const cv::Vec3d origin(-120, 0, 0);
+
+                    for (int i = 0; i < sizeof(text) - 1; i++)
+                    {
+                        cv::Vec3d start{ origin[0] + (content + margin) * i , origin[1], origin[2]};
+
+                        auto draw2dPolyLine = [&](const std::vector<std::array<int, 2>>& vertexs_2d) {
+                            std::vector<cv::Vec3d> vertexs;
+                            for (auto& ver : vertexs_2d)
+                                vertexs.push_back({ start[0] + ver[0], start[1] + ver[1], start[2] });
+                            arCore.drawPolyLine(frame, vertexs, false, camPose, { 0, 0, 255 }, 5);
+                        };
+
+                        switch (text[i])
+                        {
+                        case 'A':
+                            draw2dPolyLine({ {0, content}, {content / 2, 0}, {content, content} });
+                            draw2dPolyLine({ {content / 4, content / 2}, {content / 4 * 3, content / 2} });
+                            break;
+                        case 'U':
+                            draw2dPolyLine({ {0, 0}, {0, content}, {content, content}, {content, 0} });
+                            break;
+                        case 'T':
+                            draw2dPolyLine({ {0, 0}, {content, 0} });
+                            draw2dPolyLine({ {content / 2, 0}, {content / 2, content} });
+                            break;
+                        case 'O':
+                        case 'D':
+                            draw2dPolyLine({ {0, 0}, {0, content}, {content, content}, {content, 0}, {0, 0} });
+                            break;
+                        case 'C':
+                            draw2dPolyLine({ {content, 0}, {0, 0}, {0, content}, {content, content} });
+                            break;
+                        default:
+                            break;
+                        }
                     }
                 }
 

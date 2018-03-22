@@ -32,6 +32,10 @@ ToolBox::ToolBox(QWidget* parent)
     btn = new QPushButton("Toggle SpongeBob", this);
     connect(btn, &QPushButton::clicked, toggleSpongeBob);
     layout->addWidget(btn);
+
+    btn = new QPushButton("Toggle AutoCAD", this);
+    connect(btn, &QPushButton::clicked, toggleAutoCAD);
+    layout->addWidget(btn);
 }
 
 

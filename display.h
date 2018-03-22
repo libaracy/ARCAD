@@ -21,3 +21,5 @@ CORE_EXPORT_API void display();
 CORE_EXPORT_API void toggleFloor();
 
 CORE_EXPORT_API void toggleSpongeBob();
+
+CORE_EXPORT_API void toggleAutoCAD();
