@@ -85,6 +85,9 @@ void demo(string videoname) {
                 if (s_showSpongeBob)
                     arCore.combineVTK2Frame(frame, camPose);
 
+                arCore.drawCoordinate(frame, camPose);
+                arCore.drawAnimate(frame, camPose);
+
                 //step3. draw cube
                 //arCore.drawZYJBoardCube(frame, 116, camPose);
                 //arCore.drawPoint(frame, { 0, 0, -30 }, camPose, {255,255,0}, 3);

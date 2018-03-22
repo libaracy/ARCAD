@@ -476,7 +476,7 @@ bool ARCore::combineVTK2Frame(cv::Mat & frame, const CameraPose & camPose) {
 
     assert(vtkFrameClone.size() == frame.size());
 
-    vector<Vec3d> originalPoint = { { 0,0,0 } };
+    vector<Vec3d> originalPoint = { { 55,55,0 } };
     vector<Point2d> projectedPoints;
     projectPoints(originalPoint, camPose.rvec, camPose.tvec, cameraMatrix, distCoeffs, projectedPoints);
     Point2d newOriginalPoint = projectedPoints[0];
@@ -788,6 +788,106 @@ void ARCore::drawCoordinate(cv::Mat & frame, const CameraPose & camPose) {
     drawPolyLine(frame, zArrow, false, camPose, { 0,0,255 }, 1);
 }
 
+void ARCore::drawAnimate(cv::Mat & frame, const CameraPose &camPose) {
+    static int index = 0;
+    Scalar colorC = { 0,0,255 };
+    if (index % 3 == 1)
+        colorC = { 0,255,0 };
+    else if (index % 3 == 2)
+        colorC = { 255, 0 , 0 };
+    if (index <= 15)
+    {
+        double x = -22 + 10 * (index - 1);
+        double y = -31;
+        double z = 0;
+        Vec3d lineStart = { x,y,z };
+        Vec3d lineEnd = { x + 10.0, y, z };
+        vector<Vec3d> line = { lineStart, lineEnd };
+        drawPolyLine(frame, line, false, camPose, colorC, 2);
+        Sleep(30);
+        index++;
+    }
+    if (index > 15 && index <= 35) {
+        double x = 150 - 22;
+        double y = -31 + 10 * (index - 16);
+        double z = 0;
+        Vec3d lineStart = { x,y,z };
+        Vec3d lineEnd = { x, y + 10.0, z };
+        vector<Vec3d> line = { lineStart, lineEnd };
+        drawPolyLine(frame, line, false, camPose, colorC, 2);
+        Sleep(30);
+        index++;
+    }
+    if (index > 35 && index <= 39) {
+        double x = 150 - 22;
+        double y = -31 + 10 * (35 - 16 + 1);
+        double z = 0 - 10 * (index - 36);
+        Vec3d lineStart = { x,y,z };
+        Vec3d lineEnd = { x, y, z - 10.0 };
+        vector<Vec3d> line = { lineStart, lineEnd };
+        drawPolyLine(frame, line, false, camPose, colorC, 2);
+        Sleep(30);
+        index++;
+    }
+    if (index == 40) {
+        double x = 150 - 22.0;
+        double y = -31 + 10 * (35 - 16 + 1);
+        double z = 0.0 - 10 * (39 - 36 + 1);
+        Vec3d lineStart = { x,y,z };
+        Vec3d lineEnd = { x, y, z - 6.0 };
+        vector<Vec3d> line = { lineStart, lineEnd };
+        drawPolyLine(frame, line, false, camPose, colorC, 2);
+        Sleep(30);
+        index++;
+    }
+    if (index > 40 && index <= 55) {
+        double x = 150 - 22.0 - 10 * (index - 41);
+        double y = -31 + 10 * (35 - 16 + 1);
+        double z = 0.0 - 10 * (39 - 36 + 1) - 6.0;
+        Vec3d lineStart = { x,y,z };
+        Vec3d lineEnd = { x - 10.0, y, z };
+        vector<Vec3d> line = { lineStart, lineEnd };
+        drawPolyLine(frame, line, false, camPose, colorC, 2);
+        Sleep(30);
+        index++;
+    }
+    if (index == 56) {
+        double x = 150 - 22.0 - 10 * (55 - 41) - 10.0;
+        double y = -31 + 10 * (35 - 16 + 1);
+        double z = 0.0 - 10 * (39 - 36 + 1) - 6.0;
+        Vec3d lineStart = { x,y,z };
+        Vec3d lineEnd = { x, y, z + 6.0 };
+        vector<Vec3d> line = { lineStart, lineEnd };
+        drawPolyLine(frame, line, false, camPose, colorC, 2);
+        Sleep(30);
+        index++;
+    }
+    if (index > 56 && index <= 60) {
+        double x = 150 - 22.0 - 10 * (55 - 41) - 10.0;
+        double y = -31 + 10 * (35 - 16 + 1);
+        double z = 0.0 - 10 * (39 - 36 + 1) - 6.0 + 10.0 * (index - 56);
+        Vec3d lineStart = { x,y,z };
+        Vec3d lineEnd = { x, y, z + 10.0 };
+        vector<Vec3d> line = { lineStart, lineEnd };
+        drawPolyLine(frame, line, false, camPose, colorC, 2);
+        Sleep(30);
+        index++;
+    }
+    if (index > 60 && index <= 80) {
+        double x = 150 - 22.0 - 10 * (55 - 41) - 10.0;
+        double y = -31 + 10 * (35 - 16 + 1) - 10.0*(index - 60);
+        double z = 0.0 - 10 * (39 - 36 + 1) - 6.0 + 10.0 * (60 - 56) + 10.0;
+        Vec3d lineStart = { x, y, z };
+        Vec3d lineEnd = { x, y - 10.0, z };
+        vector<Vec3d> line = { lineStart, lineEnd };
+        drawPolyLine(frame, line, false, camPose, colorC, 2);
+        Sleep(30);
+        index++;
+    }
+    if (index == 80)
+        index = 0;
+}
+
 bool ARCore::judgeIfRect(vector<Point> corners, vector<Point2i> contour) {
     if (corners.size() != 4)
         return false;
@@ -865,8 +965,6 @@ Point ARCore::getTheNearestCorner(vector<Point2d> MarkerContour, Point2d point) 
 }
 
 void ARCore::contoursMat2Vec(const std::vector<cv::Mat> & contoursMat, std::vector<std::vector<cv::Point>> & contours, const cv::Mat & hierarchyMat, std::vector<cv::Vec4i> & hierarchy) {
-    if (contoursMat.size() == 0)
-        return;
     for (int itemIndex = 0; itemIndex < contoursMat.size(); itemIndex++) {
         std::vector<cv::Point> contourItem = {};
 

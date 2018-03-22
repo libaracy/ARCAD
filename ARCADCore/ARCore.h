@@ -130,6 +130,7 @@ public:
     void drawCubeLine(cv::Mat & frame, cv::Point3d original, double width, double length, double height, const CameraPose & camPose, cv::Scalar lineColor = { 0,0,255 }, int thickness = 1);
     void drawCube(cv::Mat & frame, cv::Point3d original, double width, double length, double height, const CameraPose & camPose, cv::Scalar cubeColor = { 0,0,255 });
     void drawCoordinate(cv::Mat & frame, const CameraPose & camPose);
+    void drawAnimate(cv::Mat & frame, const CameraPose &camPose);
 public:
     void initVTK(cv::Size windowSize, bool showVTK = false);
     void setVTKCamera(const CameraPose & camPose, double dx = 0.008, double dy = 0.008);
