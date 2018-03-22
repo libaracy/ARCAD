@@ -56,7 +56,7 @@ struct LineCubeData : public CubeData
 
 struct PolyLineData : public DrawableData
 {
-    std::vector<cv::Vec3d> vertexs = { {0, 0, 0}, {100, 100, -100} };
+    std::vector<cv::Vec3d> vertexs = { {0, 0, 0}, {20,20, -20} };
     bool closed = false;
     int thickness = 2;
     PolyLineData()
